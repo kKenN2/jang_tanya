@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:medicineproject/screens/inputmed.dart';
+import 'package:medicineproject/screens/profile.dart';
 
 void main() {
   runApp(MyApp());
@@ -103,6 +104,16 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => Inputmed()),
+            );
+          /*} else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ListPage()),
+            );*/
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProfilePage()), // Corrected line
             );
           }
           // You can add more conditions here for other bottom navigation bar items if needed.
