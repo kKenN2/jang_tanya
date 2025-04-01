@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-//import 'package:google_fonts/google_fonts.dart'; 
+//import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:medicineproject/screens/profile.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -22,9 +24,8 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.blue,
           centerTitle: true,
         ),
-        body: 
-            const Inputmed(),
-            //const Home(), //Home Widget รับหน้าที่ในการ Display บนพื้นที่ Scaffold
+        body: const Inputmed(),
+        //const Home(), //Home Widget รับหน้าที่ในการ Display บนพื้นที่ Scaffold
       ),
     );
   }
@@ -92,6 +93,10 @@ class _InputmedState extends State<Inputmed> {
   TextEditingController _eveningTimeController = TextEditingController();
   TextEditingController _beforebedTimeController = TextEditingController();
 
+  TextEditingController _nameController = TextEditingController();
+  TextEditingController _descriptionController = TextEditingController();
+  TextEditingController _quantityController = TextEditingController();
+
   Future<void> _selectTime(
     BuildContext context,
     TextEditingController controller,
@@ -108,7 +113,68 @@ class _InputmedState extends State<Inputmed> {
     }
   }
 
-  Widget _buildSelectableButton(String text) {  //Slectable Button For Take Pill When
+  Future<void> _submitData() async {
+    final Uri url = Uri.parse('http://10.0.2.2:8080/medicines');
+
+    final String name = _nameController.text.trim();
+    final String description = _descriptionController.text.trim();
+    final int quantity = int.tryParse(_quantityController.text) ?? 0;
+    final String unit = _selectedOption ?? "unit";
+    final String startDate = _StartDateController.text.trim();
+    final String endDate = _EndDateController.text.trim();
+
+    // Collect meal times (ช่วงเวลาการกิน)
+    List<String> selectedMealTimes = _selectedTimes.toList();
+
+    // Collect selected times from the time pickers
+    Map<String, String> selectedTimes = {
+      "morning": _morningTimeController.text,
+      "noon": _noonTimeController.text,
+      "evening": _eveningTimeController.text,
+      "beforeBed": _beforebedTimeController.text,
+    };
+
+    // Validate required fields
+    if (name.isEmpty ||
+        description.isEmpty ||
+        startDate.isEmpty ||
+        endDate.isEmpty ||
+        selectedMealTimes.isEmpty) {
+      print("Please fill in all required fields.");
+      return;
+    }
+
+    final Map<String, dynamic> requestData = {
+      "name": name,
+      "description": description,
+      "quantity": quantity,
+      "unit": unit,
+      "startDate": startDate,
+      "endDate": endDate,
+      "mealTimes": selectedMealTimes.join(","), // Convert list to string
+      "times": selectedTimes.entries.map((e) => "${e.key} at ${e.value}").join(", "),
+
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestData),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        print("Medicine saved successfully!");
+      } else {
+        print("Failed to save data: ${response.body}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+  Widget _buildSelectableButton(String text) {
+    //Slectable Button For Take Pill When
     bool isSelected = _selectedTimes.contains(text);
     return GestureDetector(
       onTap: () {
@@ -139,23 +205,23 @@ class _InputmedState extends State<Inputmed> {
     );
   }
 
-  Widget _buildTimePickerField(String label, TextEditingController controller) { //TIme picker field
-  return TextField(
-    controller: controller,
-    readOnly: true,
-    decoration: InputDecoration(
-      labelText: label,
-      prefixIcon: const Icon(Icons.access_time),
-      border: const OutlineInputBorder(),
-    ),
-    onTap: () => _selectTime(context, controller),
-  );
-}
+  Widget _buildTimePickerField(String label, TextEditingController controller) {
+    //TIme picker field
+    return TextField(
+      controller: controller,
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.access_time),
+        border: const OutlineInputBorder(),
+      ),
+      onTap: () => _selectTime(context, controller),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(title: const Text("เพิ่มรายการยา")),
       body: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -197,19 +263,21 @@ class _InputmedState extends State<Inputmed> {
               const SizedBox(height: 20),
               TextField(
                 //Medicine Name
+                controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: "ชื่อยา",
                   border: OutlineInputBorder(),
                 ),
                 style: TextStyle(
-                fontFamily: 'ChakraPetch', // Apply your custom font here
-                //fontSize: 18, // Optional: customize font size
-                //fontWeight: FontWeight.normal, //Optional: customize font weight
-              ),
+                  fontFamily: 'ChakraPetch', // Apply your custom font here
+                  //fontSize: 18, // Optional: customize font size
+                  //fontWeight: FontWeight.normal, //Optional: customize font weight
+                ),
               ),
               const SizedBox(height: 20),
               TextField(
                 //Medicine Desc
+                controller: _descriptionController,
                 decoration: const InputDecoration(
                   labelText: "รายละเอียดยา",
                   border: OutlineInputBorder(),
@@ -221,6 +289,7 @@ class _InputmedState extends State<Inputmed> {
                   Expanded(
                     child: TextField(
                       //Medicine Amount
+                      controller: _quantityController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
@@ -353,7 +422,7 @@ class _InputmedState extends State<Inputmed> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
-                      onPressed: () {},
+                      onPressed: _submitData,
                       child: const Text(
                         "ยืนยัน",
                         style: TextStyle(color: Colors.white, fontSize: 24),

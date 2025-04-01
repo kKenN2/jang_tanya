@@ -5,6 +5,7 @@ import 'package:medicineproject/screens/inputmed.dart';
 import 'package:medicineproject/screens/profile.dart';
 
 void main() {
+  
   runApp(MyApp());
 }
 
