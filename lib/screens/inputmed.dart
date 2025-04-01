@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:medicineproject/screens/profile.dart';
 
 void main() {
   runApp(const MyApp());
@@ -377,6 +378,41 @@ class _InputmedState extends State<Inputmed> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.greenAccent,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.black54,
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.medical_services),
+            label: '',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
+        ],
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.popUntil(context, ModalRoute.withName('/'));
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => Inputmed()),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProfilePage()),
+            );
+          }
+        },
+        iconSize: 28.0, // Adjust this value
+        selectedFontSize: 14.0, // Adjust this value
+        unselectedFontSize: 12.0, // Adjust this value
+        showSelectedLabels: false, // Or adjust to your needs
+        showUnselectedLabels: false, // Or adjust to your needs
       ),
     );
   }

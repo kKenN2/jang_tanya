@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          Expanded(child: Container()),
+          //Removed Expanded(child: Container()), //Remove this line
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -90,34 +90,31 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.black54,
         items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.medical_services),
-            label: '',
-          ),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
         ],
         onTap: (index) {
           if (index == 0) {
-            // Assuming the medical_services icon is at index 0
+            Navigator.popUntil(context, ModalRoute.withName('/'));
+          } else if (index == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => Inputmed()),
             );
-          /*} else if (index == 1) {
+          } else if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ListPage()),
-            );*/
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProfilePage()), // Corrected line
+              MaterialPageRoute(builder: (context) => ProfilePage()),
             );
           }
-          // You can add more conditions here for other bottom navigation bar items if needed.
         },
+        iconSize: 28.0, // Adjust this value
+        selectedFontSize: 14.0, // Adjust this value
+        unselectedFontSize: 12.0, // Adjust this value
+        showSelectedLabels: false, // Or adjust to your needs
+        showUnselectedLabels: false, // Or adjust to your needs
       ),
     );
   }
