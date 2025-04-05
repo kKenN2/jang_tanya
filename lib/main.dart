@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   TimeDisplay(), // Show time with a separate widget
-                  FutureBuilder<List<Medicine>>(   // Loop Over the Data
+                  FutureBuilder<List<Medicine>>(   // Loop Over the Data ( loop through the list)
                     future: fetchMedicines(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
