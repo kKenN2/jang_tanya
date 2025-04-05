@@ -47,7 +47,7 @@ class Medicine {
 
 Future<List<Medicine>> fetchMedicines() async {
   final response = await http.get(
-    Uri.parse('http://10.0.2.2:8080/medicines'),
+    Uri.parse('http://10.0.2.2:8080/medicines'),    // fetch medicines
   );
 
   if (response.statusCode == 200) {
@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   TimeDisplay(), // Show time with a separate widget
-                  FutureBuilder<List<Medicine>>(
+                  FutureBuilder<List<Medicine>>(   // Loop Over the Data
                     future: fetchMedicines(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -164,7 +164,7 @@ class MedicineBox extends StatelessWidget {
   const MedicineBox({required this.medicine});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) {    // Render the Widget (MedicineBox)
     return Container(
       margin: EdgeInsets.all(10),
       padding: EdgeInsets.all(10),
