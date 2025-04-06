@@ -53,10 +53,7 @@ class Medicine {
 
 // ดึงข้อมูลจาก backend
 Future<List<Medicine>> fetchMedicines() async {
-  final response = await http.get(
-    Uri.parse('http://10.0.2.2:8080/medicines'),
-  );
-
+  final response = await http.get(Uri.parse('http://10.0.2.2:8080/medicines'));
   if (response.statusCode == 200) {
     List data = json.decode(response.body);
     return data.map((json) => Medicine.fromJson(json)).toList();
@@ -104,38 +101,27 @@ class _HomeScreenState extends State<HomeScreen> {
             const TimeDisplay(), // Show time with a separate widget
             SizedBox(height: 10),
             Container(
-              margin: EdgeInsets.symmetric(horizontal: 20),
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.teal[400],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  TimeDisplay(), // Show time with a separate widget
-                  FutureBuilder<List<Medicine>>(
-                    future: fetchMedicines(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Text('No medicines found');
-                      } else {
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(), // Disable scrolling of the inner ListView
-                          itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            return MedicineBox(medicine: snapshot.data![index]);
-                          },
-                        );
-                      }
-                    },
-                  ),
-                ],
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: FutureBuilder<List<Medicine>>(
+                future: fetchMedicines(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Text('ไม่พบข้อมูลยา');
+                  } else {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: snapshot.data!.length,
+                      itemBuilder: (context, index) {
+                        return MedicineBox(medicine: snapshot.data![index]);
+                      },
+                    );
+                  }
+                },
               ),
             ),
           ],
@@ -188,28 +174,33 @@ class MedicineBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.all(10),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.cyan[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            color: Colors.grey[300],
-            child: Center(child: Text('รูปยา')),
-          ),
-          SizedBox(height: 10),
-          Text('ชื่อยา: ${medicine.name}', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('สรรพคุณยา: ${medicine.description}'),
-          Text('เวลาที่ต้องกิน: ${medicine.times}'),
-          Text('จำนวน: ${medicine.mealTimes}'),
-        ],
+    return Card(
+      elevation: 5,
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.medication, size: 50, color: Colors.teal[600]),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ชื่อยา: ${medicine.name}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('สรรพคุณ: ${medicine.description}'),
+                  Text('เวลา: ${medicine.times}'),
+                  Text('จำนวน: ${medicine.mealTimes}'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
