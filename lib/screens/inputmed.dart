@@ -1,35 +1,10 @@
 import 'package:flutter/material.dart';
-//import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:medicineproject/screens/profile.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "My Title",
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text("My Application"),
-          backgroundColor: Colors.blue,
-          centerTitle: true,
-        ),
-        body: const Inputmed(),
-        //const Home(), //Home Widget รับหน้าที่ในการ Display บนพื้นที่ Scaffold
-      ),
-    );
-  }
-}
 
 class Inputmed extends StatefulWidget {
   const Inputmed({super.key});
@@ -41,12 +16,21 @@ class Inputmed extends StatefulWidget {
 class _InputmedState extends State<Inputmed> {
   File? _selectedImage;
   String? _selectedOption;
-  Set<String> _selectedTimes = {};
+  final Set<String> _selectedTimes = {};
+
+  final TextEditingController _StartDateController = TextEditingController();
+  final TextEditingController _EndDateController = TextEditingController();
+  final TextEditingController _morningTimeController = TextEditingController();
+  final TextEditingController _noonTimeController = TextEditingController();
+  final TextEditingController _eveningTimeController = TextEditingController();
+  final TextEditingController _beforebedTimeController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
 
   Future<void> _pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(source: source);
-
     if (pickedFile != null) {
       setState(() {
         _selectedImage = File(pickedFile.path);
@@ -55,57 +39,34 @@ class _InputmedState extends State<Inputmed> {
   }
 
   Future<void> _selectStartDate() async {
-    DateTime? _picked = await showDatePicker(
+    DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-
-    if (_picked != null) {
-      setState(() {
-        _StartDateController.text = _picked.toString().split(" ")[0];
-      });
-    }
+    setState(() {
+      _StartDateController.text = picked.toString().split(" ")[0];
+    });
   }
 
   Future<void> _selectEndDate() async {
-    DateTime? _picked = await showDatePicker(
+    DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-
-    if (_picked != null) {
-      setState(() {
-        _EndDateController.text = _picked.toString().split(" ")[0];
-      });
-    }
+    setState(() {
+      _EndDateController.text = picked.toString().split(" ")[0];
+    });
   }
 
-  TextEditingController _StartDateController = TextEditingController();
-
-  TextEditingController _EndDateController = TextEditingController();
-
-  TextEditingController _morningTimeController = TextEditingController();
-  TextEditingController _noonTimeController = TextEditingController();
-  TextEditingController _eveningTimeController = TextEditingController();
-  TextEditingController _beforebedTimeController = TextEditingController();
-
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _descriptionController = TextEditingController();
-  TextEditingController _quantityController = TextEditingController();
-
-  Future<void> _selectTime(
-    BuildContext context,
-    TextEditingController controller,
-  ) async {
+  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
     TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
-
     if (picked != null) {
       setState(() {
         controller.text = picked.format(context);
@@ -123,10 +84,8 @@ class _InputmedState extends State<Inputmed> {
     final String startDate = _StartDateController.text.trim();
     final String endDate = _EndDateController.text.trim();
 
-    // Collect meal times (ช่วงเวลาการกิน)
     List<String> selectedMealTimes = _selectedTimes.toList();
 
-    // Collect selected times from the time pickers
     Map<String, String> selectedTimes = {
       "morning": _morningTimeController.text,
       "noon": _noonTimeController.text,
@@ -134,12 +93,7 @@ class _InputmedState extends State<Inputmed> {
       "beforeBed": _beforebedTimeController.text,
     };
 
-    // Validate required fields
-    if (name.isEmpty ||
-        description.isEmpty ||
-        startDate.isEmpty ||
-        endDate.isEmpty ||
-        selectedMealTimes.isEmpty) {
+    if (name.isEmpty || description.isEmpty || startDate.isEmpty || endDate.isEmpty || selectedMealTimes.isEmpty) {
       print("Please fill in all required fields.");
       return;
     }
@@ -151,9 +105,8 @@ class _InputmedState extends State<Inputmed> {
       "unit": unit,
       "startDate": startDate,
       "endDate": endDate,
-      "mealTimes": selectedMealTimes.join(","), // Convert list to string
+      "mealTimes": selectedMealTimes.join(","),
       "times": selectedTimes.entries.map((e) => "${e.key} at ${e.value}").join(", "),
-
     };
 
     try {
@@ -174,7 +127,6 @@ class _InputmedState extends State<Inputmed> {
   }
 
   Widget _buildSelectableButton(String text) {
-    //Slectable Button For Take Pill When
     bool isSelected = _selectedTimes.contains(text);
     return GestureDetector(
       onTap: () {
@@ -190,23 +142,32 @@ class _InputmedState extends State<Inputmed> {
         padding: const EdgeInsets.symmetric(vertical: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green[200] : Colors.grey[200],
+          color: isSelected ? Colors.green[300] : Colors.grey[300],
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: isSelected ? Colors.green : Colors.grey),
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isSelected ? Colors.green[800] : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? Colors.green[800] : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (isSelected)
+              const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Icon(Icons.check, color: Colors.green, size: 18),
+              ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildTimePickerField(String label, TextEditingController controller) {
-    //TIme picker field
     return TextField(
       controller: controller,
       readOnly: true,
@@ -224,265 +185,158 @@ class _InputmedState extends State<Inputmed> {
     return Scaffold(
       appBar: AppBar(title: const Text("เพิ่มรายการยา")),
       body: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 150,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.grey[200],
-                ),
-                child:
-                    _selectedImage != null
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image section
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    height: 150,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: _selectedImage != null
                         ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                        : const Icon(
-                          Icons.image,
-                          size: 100,
-                          color: Colors.grey,
-                        ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.camera_alt),
-                    onPressed: () => _pickImage(ImageSource.camera),
+                        : const Icon(Icons.image, size: 100, color: Colors.grey),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.image),
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.camera_alt),
+                        onPressed: () => _pickImage(ImageSource.camera),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.image),
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                      ),
+                    ],
+                  )
                 ],
               ),
-              const SizedBox(height: 20),
-              TextField(
-                //Medicine Name
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: "ชื่อยา",
-                  border: OutlineInputBorder(),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: "ชื่อยา",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: "รายละเอียด",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: "จำนวน",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                 ),
-                style: TextStyle(
-                  fontFamily: 'ChakraPetch', // Apply your custom font here
-                  //fontSize: 18, // Optional: customize font size
-                  //fontWeight: FontWeight.normal, //Optional: customize font weight
+                const SizedBox(width: 10),
+                DropdownButton<String>(
+                  value: _selectedOption,
+                  hint: const Text("เลือกหน่วย"),
+                  items: ["เม็ด", "ช้อนชา", "ช้อนโต๊ะ", "มิลลิลิตร", "กรัม", "ซีซี"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (value) => setState(() => _selectedOption = value),
+                )
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _StartDateController,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: "วันที่เริ่ม",
+                      border: OutlineInputBorder(),
+                    ),
+                    onTap: _selectStartDate,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                //Medicine Desc
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: "รายละเอียดยา",
-                  border: OutlineInputBorder(),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _EndDateController,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: "วันที่สิ้นสุด",
+                      border: OutlineInputBorder(),
+                    ),
+                    onTap: _selectEndDate,
+                  ),
+                )
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text("ช่วงเวลาการกิน", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
+              childAspectRatio: 2.5,
+              children: [
+                _buildSelectableButton("ก่อนอาหาร"),
+                _buildSelectableButton("หลังอาหาร"),
+                _buildSelectableButton("เช้า"),
+                _buildSelectableButton("กลางวัน"),
+                _buildSelectableButton("เย็น"),
+                _buildSelectableButton("ก่อนนอน"),
+              ],
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 3.5,
+              children: [
+                _buildTimePickerField("เช้า", _morningTimeController),
+                _buildTimePickerField("กลางวัน", _noonTimeController),
+                _buildTimePickerField("เย็น", _eveningTimeController),
+                _buildTimePickerField("ก่อนนอน", _beforebedTimeController),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submitData,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text("บันทึกข้อมูล"),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      //Medicine Amount
-                      controller: _quantityController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: "จำนวนรับประทานครั้งละ",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  DropdownButton<String>(
-                    //Medicine Type
-                    value: _selectedOption,
-                    hint: const Text("เลือก"),
-                    items:
-                        [
-                          "เม็ด",
-                          "ช้อนชา",
-                          "ช้อนโต๊ะ",
-                          "มิลลิลิตร",
-                          "กรัม",
-                          "ซีซี",
-                        ].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedOption = newValue;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      // START DATE
-                      controller: _StartDateController,
-                      decoration: const InputDecoration(
-                        labelText: "Start Date",
-                        filled: true,
-                        prefixIcon: Icon(Icons.calendar_today),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.blue),
-                        ),
-                      ),
-                      readOnly: true,
-                      onTap: () {
-                        _selectStartDate();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10), // Space between fields
-                  Expanded(
-                    child: TextField(
-                      // END DATE
-                      controller: _EndDateController,
-                      decoration: const InputDecoration(
-                        labelText: "End Date",
-                        filled: true,
-                        prefixIcon: Icon(Icons.calendar_today),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.blue),
-                        ),
-                      ),
-                      readOnly: true,
-                      onTap: () {
-                        _selectEndDate();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                // Take when meals
-                "ช่วงเวลาการกิน",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-
-              GridView.count(
-                //time picker
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 5,
-                mainAxisSpacing: 5,
-                childAspectRatio: 2.5,
-                children: [
-                  _buildSelectableButton("ก่อนอาหาร"),
-                  _buildSelectableButton("หลังอาหาร"),
-                  _buildSelectableButton("เช้า"),
-                  _buildSelectableButton("กลางวัน"),
-                  _buildSelectableButton("เย็น"),
-                  _buildSelectableButton("ก่อนนอน"),
-                ],
-              ),
-              const SizedBox(height: 20),
-              GridView.count(
-                crossAxisCount: 2, // 2 columns
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 3.5,
-                children: [
-                  _buildTimePickerField("Morning", _morningTimeController),
-                  _buildTimePickerField("Noon", _noonTimeController),
-                  _buildTimePickerField("Evening", _eveningTimeController),
-                  _buildTimePickerField("Before Bed", _beforebedTimeController),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                      onPressed: _submitData,
-                      child: const Text(
-                        "ยืนยัน",
-                        style: TextStyle(color: Colors.white, fontSize: 24),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        "ยกเลิก",
-                        style: TextStyle(color: Colors.white, fontSize: 24),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.greenAccent,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black54,
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.medical_services),
-            label: '',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
-        ],
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.popUntil(context, ModalRoute.withName('/'));
-          } else if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => Inputmed()),
-            );
-          } else if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProfilePage()),
-            );
-          }
-        },
-        iconSize: 28.0, // Adjust this value
-        selectedFontSize: 14.0, // Adjust this value
-        unselectedFontSize: 12.0, // Adjust this value
-        showSelectedLabels: false, // Or adjust to your needs
-        showUnselectedLabels: false, // Or adjust to your needs
       ),
     );
   }
 }
+

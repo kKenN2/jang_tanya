@@ -6,22 +6,28 @@ import 'package:medicineproject/screens/profile.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-void main() {
-  runApp(MyApp());
-}
+// เรียกใช้แอป
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: HomeScreen());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Medical App',
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        scaffoldBackgroundColor: Colors.blue[50],
+        fontFamily: 'Arial',
+      ),
+      home: const HomeScreen(),
+    );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
+// Model ยา
 class Medicine {
   final String name;
   final String description;
@@ -45,9 +51,10 @@ class Medicine {
   }
 }
 
+// ดึงข้อมูลจาก backend
 Future<List<Medicine>> fetchMedicines() async {
   final response = await http.get(
-    Uri.parse('http://10.0.2.2:8080/medicines'),    // fetch medicines
+    Uri.parse('http://10.0.2.2:8080/medicines'),
   );
 
   if (response.statusCode == 200) {
@@ -56,6 +63,14 @@ Future<List<Medicine>> fetchMedicines() async {
   } else {
     throw Exception('Failed to load medicines');
   }
+}
+
+// หน้าหลัก Home
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -76,11 +91,18 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SizedBox(height: 20),
             CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.grey[300],
-              child: Text('User Pic'),
+              radius: 45,
+              backgroundColor: Colors.teal[100],
+              child: const Icon(Icons.person, size: 50, color: Colors.white),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 10),
+            const Text(
+              'ยาของฉันวันนี้',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            const TimeDisplay(), // Show time with a separate widget
+            SizedBox(height: 10),
             Container(
               margin: EdgeInsets.symmetric(horizontal: 20),
               padding: EdgeInsets.all(10),
@@ -92,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   TimeDisplay(), // Show time with a separate widget
-                  FutureBuilder<List<Medicine>>(   // Loop Over the Data ( loop through the list)
+                  FutureBuilder<List<Medicine>>(
                     future: fetchMedicines(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -124,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.greenAccent,
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.black54,
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
           BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
@@ -158,13 +180,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// กล่องแสดงข้อมูลยา
 class MedicineBox extends StatelessWidget {
   final Medicine medicine;
 
-  const MedicineBox({required this.medicine});
+  const MedicineBox({super.key, required this.medicine});
 
   @override
-  Widget build(BuildContext context) {    // Render the Widget (MedicineBox)
+  Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.all(10),
       padding: EdgeInsets.all(10),
@@ -192,7 +215,10 @@ class MedicineBox extends StatelessWidget {
   }
 }
 
+// แสดงเวลา
 class TimeDisplay extends StatefulWidget {
+  const TimeDisplay({super.key});
+
   @override
   _TimeDisplayState createState() => _TimeDisplayState();
 }
@@ -210,7 +236,7 @@ class _TimeDisplayState extends State<TimeDisplay> {
     Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         _currentTime = DateFormat(
-          'dd/MM/yyyy  HH:mm:ss',
+          'dd/MM/yyyy HH:mm:ss',
         ).format(DateTime.now());
       });
     });
@@ -218,17 +244,9 @@ class _TimeDisplayState extends State<TimeDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          'วัน/เดือน/ปี',
-          style: TextStyle(fontSize: 16, color: Colors.white),
-        ),
-        Text(
-          _currentTime,
-          style: TextStyle(fontSize: 16, color: Colors.white),
-        ),
-      ],
+    return Text(
+      _currentTime,
+      style: const TextStyle(fontSize: 16, color: Colors.teal),
     );
   }
 }
