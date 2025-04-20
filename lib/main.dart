@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:medicineproject/screens/inputmed.dart';
+import 'package:medicineproject/screens/reminder.dart';
 import 'package:medicineproject/screens/profile.dart';
+import 'package:medicineproject/notificationHelper.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 // เรียกใช้แอป
-void main() => runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -22,7 +27,12 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.blue[50],
         fontFamily: 'Arial',
       ),
-      home: const HomeScreen(),
+      home: Builder(
+        builder: (context) {
+          NotificationHelper.init(context); // Pass context here
+          return const HomeScreen();
+        },
+      ),
     );
   }
 }
@@ -49,7 +59,7 @@ class Medicine {
       description: json['description'],
       mealTimes: json['mealTimes'],
       times: json['times'],
-      quantity: json['quantity']
+      quantity: json['quantity'],
     );
   }
 }
@@ -86,7 +96,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView( // Wrap the Column with SingleChildScrollView
+      body: SingleChildScrollView(
+        // Wrap the Column with SingleChildScrollView
         child: Column(
           children: [
             const SizedBox(height: 20),
@@ -99,6 +110,28 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               'ยาของฉันวันนี้',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                NotificationHelper.scheduleNotification(
+                  'Scheduled', // title
+                  'This is a scheduled notification', // body
+                );
+              },
+              child: const Text(
+                'Schedule Now',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             const TimeDisplay(), // Show time with a separate widget
@@ -151,6 +184,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const Inputmed()),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReminderPage()),
             );
           } else if (index == 3) {
             Navigator.push(
@@ -235,7 +273,8 @@ class _TimeDisplayState extends State<TimeDisplay> {
 
   void _updateTime() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) { // Check if the widget is still in the tree
+      if (mounted) {
+        // Check if the widget is still in the tree
         setState(() {
           _currentTime = DateFormat(
             'dd/MM/yyyy HH:mm:ss',
