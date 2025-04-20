@@ -33,12 +33,14 @@ class Medicine {
   final String description;
   final String mealTimes;
   final String times;
+  final String quantity;
 
   Medicine({
     required this.name,
     required this.description,
     required this.mealTimes,
     required this.times,
+    required this.quantity,
   });
 
   factory Medicine.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class Medicine {
       description: json['description'],
       mealTimes: json['mealTimes'],
       times: json['times'],
+      quantity: json['quantity']
     );
   }
 }
@@ -195,7 +198,7 @@ class MedicineBox extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text('สรรพคุณ: ${medicine.description}'),
                   Text('เวลา: ${medicine.times}'),
-                  Text('จำนวน: ${medicine.mealTimes}'),
+                  Text('จำนวน: ${medicine.quantity}'),
                 ],
               ),
             ),
