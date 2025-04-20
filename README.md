@@ -1,6 +1,6 @@
 # medicineproject
 
-A new Flutter project.
+Medicine Alarm app made with Flutter.
 
 ## Getting Started
 
