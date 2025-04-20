@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:medicineproject/main.dart';
+
 class Inputmed extends StatefulWidget {
   const Inputmed({super.key});
 
@@ -116,13 +118,19 @@ class _InputmedState extends State<Inputmed> {
         body: jsonEncode(requestData),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        print("Medicine saved successfully!");
-      } else {
-        print("Failed to save data: ${response.body}");
-      }
-    } catch (e) {
-      print("Error: $e");
+       if (response.statusCode == 201 || response.statusCode == 200) {
+      print("Medicine saved successfully!");
+      // แทนที่หน้าปัจจุบันด้วยหน้าหลัก
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()), // แทนที่ HomePage() ด้วย Widget หน้าหลักของคุณ
+      );
+    } else {
+      print("Failed to save data: ${response.body}");
+      // แสดงข้อความผิดพลาด
+    }
+  } catch (e) {
+    print("Error: $e");
     }
   }
 

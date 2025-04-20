@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.teal[200],
       appBar: AppBar(
         backgroundColor: Colors.greenAccent,
-        title: Text(
+        title: const Text(
           'สมศัก จริงดิ',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
@@ -86,22 +86,22 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView( // Wrap the Column with SingleChildScrollView
         child: Column(
           children: [
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             CircleAvatar(
               radius: 45,
               backgroundColor: Colors.teal[100],
               child: const Icon(Icons.person, size: 50, color: Colors.white),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             const Text(
               'ยาของฉันวันนี้',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             const TimeDisplay(), // Show time with a separate widget
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: FutureBuilder<List<Medicine>>(
                 future: fetchMedicines(),
                 builder: (context, snapshot) {
@@ -147,12 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
           } else if (index == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => Inputmed()),
+              MaterialPageRoute(builder: (context) => const Inputmed()),
             );
           } else if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ProfilePage()),
+              MaterialPageRoute(builder: (context) => const ProfilePage()),
             );
           }
         },
@@ -216,6 +216,7 @@ class TimeDisplay extends StatefulWidget {
 
 class _TimeDisplayState extends State<TimeDisplay> {
   String _currentTime = '';
+  Timer? _timer; // Add a Timer variable
 
   @override
   void initState() {
@@ -223,13 +224,21 @@ class _TimeDisplayState extends State<TimeDisplay> {
     _updateTime();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    super.dispose();
+  }
+
   void _updateTime() {
-    Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        _currentTime = DateFormat(
-          'dd/MM/yyyy HH:mm:ss',
-        ).format(DateTime.now());
-      });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) { // Check if the widget is still in the tree
+        setState(() {
+          _currentTime = DateFormat(
+            'dd/MM/yyyy HH:mm:ss',
+          ).format(DateTime.now());
+        });
+      }
     });
   }
 
