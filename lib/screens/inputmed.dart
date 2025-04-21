@@ -109,7 +109,10 @@ class _InputmedState extends State<Inputmed> {
       "startDate": startDate,
       "endDate": endDate,
       "mealTimes": selectedMealTimes.join(","),
-      "times": selectedTimes.entries.map((e) => "${e.key} at ${e.value}").join(", "),
+      "times": selectedTimes.entries
+        .where((e) => e.value.isNotEmpty)
+        .map((e) => "${e.key} at ${e.value}")
+        .join(", "),
     };
 
     try {
