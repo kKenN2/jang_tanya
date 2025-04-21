@@ -78,65 +78,106 @@ class _InputmedState extends State<Inputmed> {
   }
 
   Future<void> _submitData() async {
-    final Uri url = Uri.parse('http://10.0.2.2:8080/medicines');
+  final Uri url = Uri.parse('http://10.0.2.2:8080/medicines');
 
-    final String name = _nameController.text.trim();
-    final String description = _descriptionController.text.trim();
-    final int quantity = int.tryParse(_quantityController.text) ?? 0;
-    final String unit = _selectedOption ?? "unit";
-    final String startDate = _StartDateController.text.trim();
-    final String endDate = _EndDateController.text.trim();
+  final String name = _nameController.text.trim();
+  final String description = _descriptionController.text.trim();
+  final int quantity = int.tryParse(_quantityController.text) ?? 0;
+  final String unit = _selectedOption ?? "unit";
+  final String startDate = _StartDateController.text.trim();
+  final String endDate = _EndDateController.text.trim();
+  List<String> selectedMealTimes = _selectedTimes.toList();
 
-    List<String> selectedMealTimes = _selectedTimes.toList();
+  Map<String, String> selectedTimes = {
+    "morning": _morningTimeController.text,
+    "noon": _noonTimeController.text,
+    "evening": _eveningTimeController.text,
+    "beforeBed": _beforebedTimeController.text,
+  };
 
-    Map<String, String> selectedTimes = {
-      "morning": _morningTimeController.text,
-      "noon": _noonTimeController.text,
-      "evening": _eveningTimeController.text,
-      "beforeBed": _beforebedTimeController.text,
-    };
+  if (name.isEmpty || description.isEmpty || startDate.isEmpty || endDate.isEmpty || selectedMealTimes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("กรุณากรอกข้อมูลให้ครบถ้วน")),
+    );
+    return;
+  }
 
-    if (name.isEmpty || description.isEmpty || startDate.isEmpty || endDate.isEmpty || selectedMealTimes.isEmpty) {
-      print("Please fill in all required fields.");
-      return;
-    }
-
-    final Map<String, dynamic> requestData = {
-      "name": name,
-      "description": description,
-      "quantity": quantity,
-      "unit": unit,
-      "startDate": startDate,
-      "endDate": endDate,
-      "mealTimes": selectedMealTimes.join(","),
-      "times": selectedTimes.entries
+  final Map<String, dynamic> requestData = {
+    "name": name,
+    "description": description,
+    "quantity": quantity,
+    "unit": unit,
+    "startDate": startDate,
+    "endDate": endDate,
+    "mealTimes": selectedMealTimes.join(","),
+    "times": selectedTimes.entries
         .where((e) => e.value.isNotEmpty)
         .map((e) => "${e.key} at ${e.value}")
         .join(", "),
-    };
+  };
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(requestData),
-      );
+  try {
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(requestData),
+    );
 
-       if (response.statusCode == 201 || response.statusCode == 200) {
-      print("Medicine saved successfully!");
-      // แทนที่หน้าปัจจุบันด้วยหน้าหลัก
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()), // แทนที่ HomePage() ด้วย Widget หน้าหลักของคุณ
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      // ✅ บันทึกสำเร็จ
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("สำเร็จ"),
+          content: const Text("บันทึกข้อมูลสำเร็จ"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // ปิด dialog
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+              child: const Text("ตกลง"),
+            ),
+          ],
+        ),
       );
     } else {
-      print("Failed to save data: ${response.body}");
-      // แสดงข้อความผิดพลาด
+      // ❌ บันทึกไม่สำเร็จ
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("ผิดพลาด"),
+          content: Text("ไม่สามารถบันทึกข้อมูลได้: ${response.body}"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // แค่ปิด dialog
+              child: const Text("ตกลง"),
+            ),
+          ],
+        ),
+      );
     }
   } catch (e) {
-    print("Error: $e");
-    }
+    // ❌ เกิดข้อผิดพลาดระหว่างส่งข้อมูล
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("ข้อผิดพลาด"),
+        content: Text("เกิดข้อผิดพลาด: $e"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("ตกลง"),
+          ),
+        ],
+      ),
+    );
   }
+}
+
 
   Widget _buildSelectableButton(String text) {
     bool isSelected = _selectedTimes.contains(text);
