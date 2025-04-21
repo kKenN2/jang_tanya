@@ -1,5 +1,3 @@
-// --- main.dart (Standard Approach Version) ---
-
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart'; // Needed for DateFormat
@@ -9,7 +7,7 @@ import 'package:medicineproject/screens/profile.dart';
 import 'package:medicineproject/notificationHelper.dart'; // Your notification helper
 import 'dart:convert'; // For jsonDecode
 import 'package:http/http.dart' as http; // For HTTP requests
-import 'package:flutter/services.dart'; // For FilteringTextInputFormatter if used elsewhere
+// For FilteringTextInputFormatter if used elsewhere
 
 // --- Top-Level Function for Parsing Times ---
 // Parses the time string like "morning at 7:18 PM, evening at 9:00 PM"
