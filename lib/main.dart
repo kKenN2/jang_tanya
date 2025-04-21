@@ -84,6 +84,20 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Future<List<Medicine>>? _medicinesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _medicinesFuture = fetchMedicines();
+  }
+
+  Future<void> _refreshMedicines() async {
+    setState(() {
+      _medicinesFuture = fetchMedicines();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,71 +110,69 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        // Wrap the Column with SingleChildScrollView
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            CircleAvatar(
-              radius: 45,
-              backgroundColor: Colors.teal[100],
-              child: const Icon(Icons.person, size: 50, color: Colors.white),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'ยาของฉันวันนี้',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                NotificationHelper.scheduleNotification(
-                  'Scheduled', // title
-                  'This is a scheduled notification', // body
-                );
-              },
-              child: const Text(
-                'Schedule Now',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+      body: RefreshIndicator( //refresh
+        onRefresh: _refreshMedicines,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              CircleAvatar(
+                radius: 45,
+                backgroundColor: Colors.teal[100],
+                child: const Icon(Icons.person, size: 50, color: Colors.white),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              const SizedBox(height: 10),
+              const Text(
+                'ยาของฉันวันนี้',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 10),
-            const TimeDisplay(), // Show time with a separate widget
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FutureBuilder<List<Medicine>>(
-                future: fetchMedicines(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Text('ไม่พบข้อมูลยา');
-                  } else {
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: snapshot.data!.length,
-                      itemBuilder: (context, index) {
-                        return MedicineBox(medicine: snapshot.data![index]);
-                      },
-                    );
-                  }
+              ElevatedButton(
+                onPressed: () {
+                  NotificationHelper.scheduleNotification(
+                    'Scheduled',
+                    'This is a scheduled notification',
+                  );
                 },
+                child: const Text(
+                  'Schedule Now',
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              const TimeDisplay(),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FutureBuilder<List<Medicine>>(
+                  future: _medicinesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Text('ไม่พบข้อมูลยา');
+                    } else {
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: snapshot.data!.length,
+                        itemBuilder: (context, index) {
+                          return MedicineBox(medicine: snapshot.data![index]);
+                        },
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -170,10 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.black54,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.medical_services),
-            label: '',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: ''),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
         ],
@@ -206,6 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 
 // กล่องแสดงข้อมูลยา
 class MedicineBox extends StatelessWidget {
