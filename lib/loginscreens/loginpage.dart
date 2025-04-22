@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 import 'package:medicineproject/loginscreens/RegisterPage.dart';
 import 'package:medicineproject/main.dart';
 
@@ -72,3 +72,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+*/

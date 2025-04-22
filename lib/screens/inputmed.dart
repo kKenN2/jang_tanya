@@ -145,7 +145,7 @@ class _InputmedState extends State<Inputmed> {
                       Navigator.of(context).pop(); // ปิด dialog
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
-                          builder: (context) => const HomeScreen(username: ''),
+                          builder: (context) => const HomeScreen(),
                         ),
                         (Route<dynamic> route) => false,
                       );
