@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medicineproject/loginscreens/RegisterPage.dart';
 import 'package:medicineproject/main.dart';
 
 class LoginPage extends StatefulWidget {
@@ -40,22 +41,31 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
+      appBar: AppBar(title: Text('Jang tanya')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             TextField(
               controller: _usernameController,
-              decoration: InputDecoration(labelText: 'Username'),
+              decoration: InputDecoration(labelText: 'ชื่อผู้ใช้'),
             ),
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: 'รหัสผ่าน'),
             ),
             SizedBox(height: 20),
-            ElevatedButton(onPressed: _login, child: Text('Login')),
+            ElevatedButton(onPressed: _login, child: Text('เข้าสู่ระบบ')),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => RegisterPage()),
+                );
+              },
+              child: Text("สมัครใช้งาน"),
+            ),
           ],
         ),
       ),
