@@ -1,18 +1,18 @@
 // --- CORRECTED reminder.dart ---
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // For delete action
-import 'package:medicineproject/notificationHelper.dart'; // For snooze action
-import 'dart:convert'; // For payload encoding if needed for snooze
-
+import 'package:http/http.dart' as http; // Import http
+import 'package:medicineproject/notificationHelper.dart';
+import 'dart:convert'; // Import convert
+//import 'package:intl/intl.dart'; // Import for date formatting
 
 class ReminderPage extends StatefulWidget {
   final String medicineId;
   final String medicineName;
   final String description;
   final String quantity;
-  final String unit; // Added unit
-  final int notificationId; // Original notification ID for cancelling/snoozing
+  final String unit;
+  final int notificationId;
 
   const ReminderPage({
     super.key,
@@ -31,33 +31,89 @@ class ReminderPage extends StatefulWidget {
 class _ReminderPageState extends State<ReminderPage> {
   bool _isDeleting = false;
   bool _isSnoozing = false;
+  bool _isLogging = false; // Added state for logging action
+
+  // --- NEW: Helper Function to Send Log Data ---
+  Future<bool> _sendLog(String action) async {
+    if (_isLogging) return false; // Prevent double logging
+
+    setState(() { _isLogging = true; });
+    print('Sending log: $action for ${widget.medicineName}');
+
+    final logUrl = Uri.parse('http://10.0.2.2:8080/logs'); // Your log endpoint
+    final logData = {
+      "medicineId": widget.medicineId,
+      "medicineName": widget.medicineName,
+      "action": action, // "TAKEN" or "POSTPONED"
+      "logTimestamp": DateTime.now().toIso8601String(), // Current time in standard format
+      // Add other fields if your MedicationLog entity requires them
+    };
+
+    try {
+      final response = await http.post(
+        logUrl,
+        headers: {"Content-Type": "application/json; charset=UTF-8"},
+        body: jsonEncode(logData),
+      ).timeout(const Duration(seconds: 10));
+
+      setState(() { _isLogging = false; }); // Logging attempt finished
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        print('Log ($action) saved successfully.');
+        return true; // Indicate success
+      } else {
+        print('Failed to save log ($action): ${response.statusCode} ${response.body}');
+         if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('ไม่สามารถบันทึก Log ได้: ${response.statusCode}')),
+              );
+         }
+        return false; // Indicate failure
+      }
+    } catch (e) {
+      print('Error sending log ($action): $e');
+      if (mounted) {
+         setState(() { _isLogging = false; });
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึก Log: $e')),
+         );
+      }
+      return false; // Indicate failure
+    }
+  }
+  // --- END Helper Function ---
+
 
   // --- Action for "OK" (ตกลง) Button ---
   Future<void> _handleOkAction() async {
-    if (_isDeleting) return; // Prevent double taps
+    // Prevent double taps while deleting OR logging
+    if (_isDeleting || _isLogging) return;
 
-    setState(() {
-      _isDeleting = true; // Show loading/disable button
-    });
+    // 1. Attempt to log the action
+    bool logSuccess = await _sendLog("TAKEN"); // Log as "TAKEN"
 
+    // Optional: Decide if you want to proceed with delete only if logging succeeds
+    // if (!logSuccess) {
+    //    print("Aborting delete because logging failed.");
+    //    return;
+    // }
+
+    // 2. Proceed with deleting the medicine entry (if desired)
+    setState(() { _isDeleting = true; });
     print('OK Action: Attempting to delete medicine ID: ${widget.medicineId}');
-
-    // --- Reusing Delete Logic ---
-    final url = Uri.parse('http://10.0.2.2:8080/medicines/${widget.medicineId}');
+    final deleteUrl = Uri.parse('http://10.0.2.2:8080/medicines/${widget.medicineId}');
     try {
-      final response = await http.delete(url).timeout(const Duration(seconds: 10));
+      final response = await http.delete(deleteUrl).timeout(const Duration(seconds: 10));
       print('Delete Response Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        print('Medicine ${widget.medicineId} deleted successfully via reminder page.');
-        // Cancel the original notification just in case (might already be cleared)
+        print('Medicine ${widget.medicineId} deleted successfully.');
         await NotificationHelper.cancelNotification(widget.notificationId);
-        if (!mounted) return; // Check if widget is still alive
+        if (!mounted) return;
          ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(content: Text("ยืนยันการกินยา '${widget.medicineName}' และลบข้อมูลแล้ว")),
          );
-        Navigator.of(context).pop(); // Close the reminder page
-        // NOTE: HomeScreen won't automatically refresh. Might need a callback or state management.
+        Navigator.of(context).pop(); // Close screen
       } else {
         print('Failed to delete medicine ${widget.medicineId}: ${response.statusCode} ${response.body}');
          if (!mounted) return;
@@ -68,45 +124,42 @@ class _ReminderPageState extends State<ReminderPage> {
     } catch (e) {
       print('Error deleting medicine ${widget.medicineId}: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("เกิดข้อผิดพลาด: $e")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text("เกิดข้อผิดพลาด: $e")), );
     } finally {
-       if (mounted) {
-         setState(() {
-           _isDeleting = false; // Re-enable button
-         });
-       }
+       if (mounted) { setState(() { _isDeleting = false; }); }
     }
-    // --- End Delete Logic ---
   }
 
   // --- Action for "Postpone" (เลื่อนไปก่อน) Button ---
   Future<void> _handlePostponeAction() async {
-     if (_isSnoozing) return;
+     // Prevent double taps while snoozing OR logging
+     if (_isSnoozing || _isLogging) return;
 
+      // 1. Attempt to log the action
+     bool logSuccess = await _sendLog("POSTPONED"); // Log as "POSTPONED"
+
+     // Optional: Proceed only if logging succeeds
+     // if (!logSuccess) {
+     //    print("Aborting snooze because logging failed.");
+     //    return;
+     // }
+
+     // 2. Proceed with snoozing
      setState(() {_isSnoozing = true;});
      print('Postpone Action: Snoozing notification ID: ${widget.notificationId}');
 
-      // 1. Cancel the original repeating notification for this time slot
-      //    (We assume the ID passed is for the specific time slot)
-      //    Note: This cancels future daily repeats as well for this specific notificationId.
-      //    A more complex system might only want to acknowledge today's.
+      // Cancel the original repeating notification
       await NotificationHelper.cancelNotification(widget.notificationId);
 
-      // 2. Schedule a new one-time notification for 15 minutes later
-      //    We need to re-create the payload to pass necessary info if the snoozed notification is tapped
+      // Re-create the payload needed for snooze notification tap
        final String payload = jsonEncode({
-            'id': widget.medicineId,
-            'name': widget.medicineName,
-            'description': widget.description,
-            'quantity': widget.quantity,
-            'unit': widget.unit,
-            'notificationId': widget.notificationId, // Keep original ID reference if needed
+            'id': widget.medicineId, 'name': widget.medicineName, 'description': widget.description,
+            'quantity': widget.quantity, 'unit': widget.unit, 'notificationId': widget.notificationId,
         });
 
+      // Schedule the snooze notification
       await NotificationHelper.scheduleSnoozeNotification(
-          notificationId: widget.notificationId, // Re-use ID to replace original
+          notificationId: widget.notificationId, // Re-use ID
           medicineName: widget.medicineName,
           quantity: widget.quantity,
           unit: widget.unit,
@@ -118,96 +171,58 @@ class _ReminderPageState extends State<ReminderPage> {
            SnackBar(content: Text("เลื่อนการแจ้งเตือน '${widget.medicineName}' ไปอีก 15 นาที")),
       );
       Navigator.of(context).pop(); // Close the reminder page
-
-      // No need to set _isSnoozing back to false as the page is popped
+      // No need to set _isSnoozing=false as page is popped
   }
-
 
   @override
   Widget build(BuildContext context) {
-    // Combine quantity and unit for display
     String dosageInfo = "${widget.quantity} ${widget.unit ?? ''}".trim();
+    // Disable buttons while logging or performing main action
+    bool buttonsDisabled = _isLogging || _isDeleting || _isSnoozing;
 
     return Scaffold(
       backgroundColor: Colors.teal[200],
-      appBar: AppBar(
+      appBar: AppBar( /* ... AppBar as before ... */
         title: const Text('แจ้งเตือนกินยา', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.greenAccent,
-        elevation: 1,
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.of(context).pop(),
-         ),
-         automaticallyImplyLeading: false, // Don't show default back if using custom leading
+        backgroundColor: Colors.greenAccent, elevation: 1,
+        leading: IconButton( icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.of(context).pop(), ),
+        automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 25.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15.0),
-                boxShadow: [ BoxShadow( color: Colors.black.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2), ), ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Display the current time perhaps? Or the intended time?
-                  // For now, keeping the structure simple
-                   Text(
-                    // Use actual medicine name here
-                    'ถึงเวลากินยา ${widget.medicineName}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle( fontSize: 24, fontWeight: FontWeight.bold, color: Colors.teal[800], ),
-                  ),
-                  const SizedBox(height: 25),
-                  _buildDetailRow('ชื่อยา:', widget.medicineName), // Use widget data
-                  const SizedBox(height: 8),
-                  _buildDetailRow('รายละเอียด:', widget.description), // Use widget data
-                  const SizedBox(height: 8),
-                  _buildDetailRow('กินครั้งละ:', dosageInfo), // Use combined quantity/unit
-                ],
-              ),
+      body: Padding( padding: const EdgeInsets.all(20.0), child: Column( mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container( /* ... Details Card ... */
+               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 25.0),
+               decoration: BoxDecoration( color: Colors.white, borderRadius: BorderRadius.circular(15.0), boxShadow: [ BoxShadow( color: Colors.black.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2), ), ], ),
+               child: Column( mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                   Text( 'ถึงเวลากินยา ${widget.medicineName}', textAlign: TextAlign.center, style: TextStyle( fontSize: 24, fontWeight: FontWeight.bold, color: Colors.teal[800], ), ),
+                   const SizedBox(height: 25),
+                   _buildDetailRow('ชื่อยา:', widget.medicineName), const SizedBox(height: 8),
+                   _buildDetailRow('รายละเอียด:', widget.description), const SizedBox(height: 8),
+                   _buildDetailRow('กินครั้งละ:', dosageInfo),
+               ], ),
             ),
             const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    // Disable button while action is in progress
-                    onPressed: _isDeleting || _isSnoozing ? null : _handleOkAction,
+            Row( mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                Expanded( child: ElevatedButton(
+                    onPressed: buttonsDisabled ? null : _handleOkAction, // Disable if busy
                     style: ElevatedButton.styleFrom( backgroundColor: Colors.teal[600], padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),), elevation: 2, ),
-                    child: _isDeleting
+                    child: _isDeleting || (_isLogging && !_isSnoozing) // Show spinner if deleting or logging for OK
                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3,))
                          : const Text('ตกลง', style: TextStyle(fontSize: 16, color: Colors.white), ),
-                  ),
-                ),
+                  ), ),
                 const SizedBox(width: 15),
-                Expanded(
-                  child: ElevatedButton(
-                     // Disable button while action is in progress
-                    onPressed: _isDeleting || _isSnoozing ? null : _handlePostponeAction,
+                Expanded( child: ElevatedButton(
+                    onPressed: buttonsDisabled ? null : _handlePostponeAction, // Disable if busy
                     style: ElevatedButton.styleFrom( backgroundColor: Colors.blueGrey[400], padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),), elevation: 2, ),
-                     child: _isSnoozing
+                     child: _isSnoozing || (_isLogging && !_isDeleting) // Show spinner if snoozing or logging for Postpone
                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3,))
                          : const Text('เลื่อนไปก่อน', style: TextStyle(fontSize: 16, color: Colors.white), ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+                  ), ),
+              ], ),
+          ], ), ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    // ... (same helper function as before) ...
-     return Row( crossAxisAlignment: CrossAxisAlignment.start, children: [ Text( '$label ', style: TextStyle( fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54, ), ), Expanded( child: Text( value, style: const TextStyle( fontSize: 16, color: Colors.black87, ), ), ), ], );
-  }
-}
+  Widget _buildDetailRow(String label, String value) { /* ... same helper ... */
+    return Row( crossAxisAlignment: CrossAxisAlignment.start, children: [ Text( '$label ', style: TextStyle( fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54, ), ), Expanded( child: Text( value, style: const TextStyle( fontSize: 16, color: Colors.black87, ), ), ), ], );
+   }
+} // End _ReminderPageState
