@@ -6,6 +6,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -68,7 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
         child: Column(
           children: [
             TextField(
-              controller: _usernameController,
+              controller: _emailController,
               decoration: InputDecoration(labelText: 'อีเมล'),
             ),
             TextField(

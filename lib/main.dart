@@ -1,25 +1,27 @@
+// --- main.dart ---
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:intl/intl.dart'; // Needed for DateFormat
-import 'package:medicineproject/screens/inputmed.dart'; // Assuming these screens exist
+import 'package:intl/intl.dart';
+import 'package:medicineproject/screens/inputmed.dart';
 import 'package:medicineproject/screens/reminder.dart';
 import 'package:medicineproject/screens/profile.dart';
-import 'package:medicineproject/notificationHelper.dart'; // Your notification helper
-import 'dart:convert'; // For jsonDecode
-import 'package:http/http.dart' as http; // For HTTP requests
-// For FilteringTextInputFormatter if used elsewhere
+import 'package:medicineproject/notificationHelper.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import plugin
 
-// --- Top-Level Function for Parsing Times ---
-// Parses the time string like "morning at 7:18 PM, evening at 9:00 PM"
+// --- Global Key ---
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// --- Top-level parseMedicineTimes ---
 List<TimeOfDay> parseMedicineTimes(String timesString) {
+  /* ... keep as is ... */
   List<TimeOfDay> parsedTimes = [];
   if (timesString.isEmpty) {
     return parsedTimes;
   }
-  // Use locale 'en_US' for reliable AM/PM parsing if needed
   final DateFormat format = DateFormat("h:mm a", "en_US");
   final List<String> timeEntries = timesString.split(',');
-
   for (String entry in timeEntries) {
     final parts = entry.trim().split(' at ');
     if (parts.length == 2 && parts[1].isNotEmpty) {
@@ -29,19 +31,21 @@ List<TimeOfDay> parseMedicineTimes(String timesString) {
         parsedTimes.add(TimeOfDay.fromDateTime(parsedDateTime));
       } catch (e) {
         print("Error parsing time entry '$entry': $e");
-        // Handle error or skip this time
       }
     }
   }
   return parsedTimes;
 }
-// --- End Top-Level Function ---
 
-// --- Main App Setup ---
+// --- Store Launch Notification Details ---
+NotificationAppLaunchDetails? notificationAppLaunchDetails;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Consider initializing NotificationHelper here if context isn't strictly needed immediately
-  // await NotificationHelper.init(); // Requires modification if context needed later
+  // --- Check for Notification Launch Details BEFORE runApp ---
+  notificationAppLaunchDetails = await NotificationHelper.getLaunchDetails();
+  // --- Initialize Helper (without context initially) ---
+  await NotificationHelper.init(); // Initialize plugin basics early
   runApp(const MyApp());
 }
 
@@ -51,42 +55,39 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey, // Use the key
       debugShowCheckedModeBanner: false,
       title: 'Medical App',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.blue[50],
-        // Consider using one of the fonts defined in pubspec.yaml
-        // fontFamily: 'ChakraPetch', // Example
-      ),
-      home: Builder(
-        builder: (context) {
-          // Initialize notifications here where context is available
-          NotificationHelper.init(context);
-          return const HomeScreen();
-        },
-      ),
-      // Define routes if using named navigation
-      // routes: {
-      //   '/': (context) => const HomeScreen(),
-      //   '/input': (context) => const Inputmed(),
-      //   '/reminder': (context) => const ReminderPage(),
-      //   '/profile': (context) => const ProfilePage(),
-      // },
+      theme: ThemeData(/* ... */),
+      // Home can be HomeScreen directly now, init happens elsewhere/later if needed
+      home: const HomeScreen(),
+      // Optionally define routes for cleaner navigation
+      routes: {
+        // Define routes if you use Navigator.pushNamed
+        '/reminder':
+            (context) => const ReminderPage(
+              /* Need to pass data */ medicineId: '',
+              medicineName: '',
+              description: '',
+              quantity: '',
+              unit: '',
+              notificationId: 0,
+            ),
+      },
     );
   }
 }
-// --- End App Setup ---
 
-// --- Medicine Data Model ---
+// --- Medicine Model (Ensure 'unit' field is added) ---
 class Medicine {
-  final String id; // Unique ID from backend (_id mapped to "id")
+  /* ... keep as is, ensure 'unit' field is present ... */
+  final String id;
   final String name;
   final String description;
   final String mealTimes;
-  final String times; // Raw time string, e.g., "morning at 7:18 PM"
-  final String quantity; // Use String if backend sends String, use int/double if backend sends number
-
+  final String times;
+  final String quantity;
+  final String unit;
   Medicine({
     required this.id,
     required this.name,
@@ -94,60 +95,51 @@ class Medicine {
     required this.mealTimes,
     required this.times,
     required this.quantity,
+    required this.unit,
   });
-
-  // Factory constructor to create Medicine from JSON
   factory Medicine.fromJson(Map<String, dynamic> json) {
     return Medicine(
-      // Parses the "id" field from JSON (expects String from backend)
       id: json['id']?.toString() ?? '',
-      name: json['name'] ?? 'No Name', // Provide default values
+      name: json['name'] ?? 'N/A',
       description: json['description'] ?? '',
       mealTimes: json['mealTimes'] ?? '',
       times: json['times'] ?? '',
-      // Adjust parsing based on actual type sent from backend (String or Number)
       quantity: json['quantity']?.toString() ?? '0',
+      unit: json['unit'] ?? '',
     );
   }
 }
-// --- End Medicine Data Model ---
 
-// --- Data Fetching Logic ---
+// --- fetchMedicines (Keep as is) ---
 Future<List<Medicine>> fetchMedicines() async {
-  final url = Uri.parse('http://10.0.2.2:8080/medicines'); // Android Emulator IP for localhost
+  /* ... keep as is ... */
+  final url = Uri.parse('http://10.0.2.2:8080/medicines');
   print("Fetching medicines from: $url");
-
   try {
-    final response = await http.get(url).timeout(const Duration(seconds: 10)); // Add timeout
-
-    // --- Debugging: Print Raw JSON ---
-    print("--- Raw JSON Response from /medicines (Status: ${response.statusCode}) ---");
-    print(response.body);
+    final response = await http.get(url).timeout(const Duration(seconds: 15));
+    print(
+      "--- Raw JSON Response from /medicines (Status: ${response.statusCode}) ---",
+    );
+    print(utf8.decode(response.bodyBytes));
     print("----------------------------------------");
-    // --- End Debugging ---
-
     if (response.statusCode == 200) {
-      // Decode the response body assuming UTF-8
       List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
       return data.map((json) => Medicine.fromJson(json)).toList();
     } else {
-      print("Failed to load medicines. Status code: ${response.statusCode}");
-      print("Response body: ${response.body}");
-      throw Exception('Failed to load medicines (Status code: ${response.statusCode})');
+      throw Exception(
+        'Failed to load medicines (Status code: ${response.statusCode})',
+      );
     }
   } catch (e) {
-     print("Error fetching medicines: $e");
-     // Rethrow or handle specific errors (e.g., TimeoutException, SocketException)
-     throw Exception('Error connecting to server: $e');
+    print("Error fetching medicines: $e");
+    throw Exception('Error connecting to server: $e');
   }
 }
-// --- End Data Fetching Logic ---
 
-
-// --- Home Screen Widget ---
+// --- HomeScreen Widget ---
 class HomeScreen extends StatefulWidget {
+  /* ... keep as is ... */
   const HomeScreen({super.key});
-
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -159,150 +151,182 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadDataAndSchedule();
+    // --- Handle navigation if app was launched from notification ---
+    _handleNotificationLaunch();
   }
 
-  // Helper to load data and schedule notifications
+  // --- NEW: Handle launch navigation ---
+  void _handleNotificationLaunch() {
+    if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+      final response = notificationAppLaunchDetails!.notificationResponse;
+      print("App launched by notification tap. Payload: ${response?.payload}");
+      if (response?.payload != null && response!.payload!.isNotEmpty) {
+        // Schedule navigation AFTER the first frame is built
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          print("Attempting navigation from launch details...");
+          NotificationHelper.navigateToReminderFromPayload(response.payload!);
+        });
+      }
+      // Clear the details after handling
+      notificationAppLaunchDetails = null;
+    }
+  }
+
   void _loadDataAndSchedule() {
-    _medicinesFuture = fetchMedicines().then((medicines) {
-       _scheduleAllNotifications(medicines); // Schedule after fetching
-       return medicines; // Return medicines for the FutureBuilder
-    }).catchError((error) {
-       print("Error fetching/scheduling in initState: $error");
-       // Return an error to FutureBuilder
-       // Use a specific type or rethrow the original error
-       throw Exception("Failed initial load: $error");
-    });
+    /* ... keep as is ... */
+    final future = fetchMedicines()
+        .then((medicines) {
+          _scheduleAllNotifications(medicines);
+          return medicines;
+        })
+        .catchError((error) {
+          print("Error loading/scheduling data: $error");
+          throw error;
+        });
+    if (mounted) {
+      setState(() {
+        _medicinesFuture = future;
+      });
+    } else {
+      _medicinesFuture = future;
+    }
   }
 
-
-  // Refresh function called by RefreshIndicator and potentially after delete/add
   Future<void> _refreshMedicines() async {
+    /* ... keep as is ... */
     print("Refreshing medicines list...");
-    // Trigger reload and reschedule by resetting the future
-    setState(() {
-       _loadDataAndSchedule();
-    });
-    // Optionally wait for it to complete if needed, but FutureBuilder handles loading state
-    // await _medicinesFuture;
+    _loadDataAndSchedule();
+    await Future.delayed(const Duration(milliseconds: 500));
   }
 
-  // Schedule all notifications based on fetched data
   Future<void> _scheduleAllNotifications(List<Medicine> medicines) async {
-      print("Attempting to schedule notifications...");
-      await NotificationHelper.cancelAllNotifications(); // Clear old ones first
-      int notificationScheduledCount = 0;
-
-      for (final medicine in medicines) {
-        if (medicine.id.isEmpty) {
-          print("Skipping scheduling for medicine '${medicine.name}' due to empty ID.");
-          continue; // Skip if ID is missing (shouldn't happen if backend is correct)
-        }
-
-        // Example ID generation (consider improving robustness later)
-        int baseId = medicine.id.hashCode.abs() % 100000; // Use modulo to keep it smaller
-
-        List<TimeOfDay> timesToSchedule = parseMedicineTimes(medicine.times); // Use top-level function
-
-        print("Parsed times for ${medicine.name} (ID: ${medicine.id}): $timesToSchedule");
-
-        for (int i = 0; i < timesToSchedule.length; i++) {
-            TimeOfDay time = timesToSchedule[i];
-            // Ensure unique ID generation logic is robust
-            int uniqueNotificationId = (baseId * 10) + i; // Example
-
-           try {
-             await NotificationHelper.scheduleSingleMedicineNotification(
-              notificationId: uniqueNotificationId,
-              medicineName: medicine.name,
-              quantity: medicine.quantity, // Pass quantity
-              time: time,
-            );
-            notificationScheduledCount++;
-           } catch (e) {
-               print("Error scheduling notification $uniqueNotificationId for ${medicine.name}: $e");
-               // Consider showing an error message to the user
-           }
+    /* ... keep as is, ensure 'unit' is passed ... */
+    print("Attempting to schedule notifications...");
+    await NotificationHelper.cancelAllNotifications();
+    int notificationScheduledCount = 0;
+    for (final medicine in medicines) {
+      if (medicine.id.isEmpty) {
+        print(
+          "Skipping scheduling for medicine '${medicine.name}' due to empty ID.",
+        );
+        continue;
+      }
+      int baseId = medicine.id.hashCode.abs() % 100000;
+      List<TimeOfDay> timesToSchedule = parseMedicineTimes(medicine.times);
+      print(
+        "Parsed times for ${medicine.name} (ID: ${medicine.id}): $timesToSchedule",
+      );
+      for (int i = 0; i < timesToSchedule.length; i++) {
+        TimeOfDay time = timesToSchedule[i];
+        int uniqueNotificationId = (baseId * 10) + i;
+        try {
+          /* ADD PAYLOAD DEBUG PRINT HERE IF NEEDED */
+          await NotificationHelper.scheduleSingleMedicineNotification(
+            notificationId: uniqueNotificationId,
+            medicineId: medicine.id,
+            medicineName: medicine.name,
+            quantity: medicine.quantity,
+            unit: medicine.unit,
+            description: medicine.description,
+            time: time,
+          );
+          notificationScheduledCount++;
+        } catch (e) {
+          print(
+            "Error scheduling notification $uniqueNotificationId for ${medicine.name}: $e",
+          );
         }
       }
-      print("Attempted to schedule $notificationScheduledCount total notifications.");
+    }
+    print(
+      "Attempted to schedule $notificationScheduledCount total notifications.",
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    /* ... keep as is ... */
     return Scaffold(
       backgroundColor: Colors.teal[200],
       appBar: AppBar(
         backgroundColor: Colors.greenAccent,
         title: const Text(
-          'สมศัก จริงดิ', // Replace with actual user name if available
+          'Somyet Horde',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
       body: RefreshIndicator(
         onRefresh: _refreshMedicines,
-        child: SingleChildScrollView( // Ensures content is scrollable if list gets long
-          physics: const AlwaysScrollableScrollPhysics(), // Allows scrolling even if list is short for refresh
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
               const SizedBox(height: 20),
-              const CircleAvatar( // Placeholder for profile picture
+              const CircleAvatar(
                 radius: 45,
-                backgroundColor: Colors.teal, // Changed color slightly
-                child: Icon(Icons.person, size: 50, color: Colors.white),
+                backgroundColor: Colors.teal,
+                child: Icon(
+                  Icons.person_outline,
+                  size: 50,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
-                'ยาของฉันวันนี้',
+                'My Medications',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              const TimeDisplay(), // Displays current clock time
+              const TimeDisplay(),
               const SizedBox(height: 20),
-              Padding( // Use Padding instead of Container for consistency
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: FutureBuilder<List<Medicine>>(
                   future: _medicinesFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: CircularProgressIndicator(),
-                      ));
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
                     } else if (snapshot.hasError) {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
-                          // Show error details for debugging, user-friendly message for release
-                          child: Text('เกิดข้อผิดพลาดในการโหลดข้อมูลยา:\n${snapshot.error}', textAlign: TextAlign.center),
+                          child: Text(
+                            'Error loading medicines:\n${snapshot.error}',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       );
                     } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(32.0),
-                          child: Text('ไม่พบข้อมูลยา'),
-                        ));
+                          child: Text('No medicine data found.'),
+                        ),
+                      );
                     } else {
-                      // Data loaded successfully
                       return ListView.builder(
-                        shrinkWrap: true, // Important inside SingleChildScrollView
-                        physics: const NeverScrollableScrollPhysics(), // List shouldn't scroll independently
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: snapshot.data!.length,
                         itemBuilder: (context, index) {
                           final medicine = snapshot.data![index];
                           return MedicineBox(
-                              medicine: medicine,
-                              // Pass _refreshMedicines so list reloads after delete
-                              onDelete: _refreshMedicines
-                           );
+                            medicine: medicine,
+                            onDelete: _refreshMedicines,
+                          );
                         },
                       );
                     }
                   },
                 ),
               ),
-              const SizedBox(height: 20), // Padding at the bottom
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -313,32 +337,37 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.black54,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'), // Add labels for clarity
-          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: 'Add Med'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.medical_services),
+            label: 'Add Med',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Reminders'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Profile'),
         ],
         onTap: (index) {
-           // Consider using a StatefulWidget for the main screen
-           // and managing the current index for the body and Nav Bar state.
-           // Simple push navigation for now:
           if (index == 0) {
-             // Already on home, refresh
-             _refreshMedicines();
+            _refreshMedicines();
           } else if (index == 1) {
-            // Navigate to Inputmed
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const Inputmed()),
-            ).then((_) {
-                // Refresh when coming back from adding potentially
-                print("Returned from Inputmed, refreshing...");
-                _refreshMedicines();
-            });
+            ).then((_) => _refreshMedicines());
           } else if (index == 2) {
+            /* Needs data */
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ReminderPage()),
+              MaterialPageRoute(
+                builder:
+                    (context) => const ReminderPage(
+                      medicineId: '',
+                      medicineName: 'N/A',
+                      description: '',
+                      quantity: '',
+                      unit: '',
+                      notificationId: 0,
+                    ),
+              ),
             );
           } else if (index == 3) {
             Navigator.push(
@@ -347,136 +376,139 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
         },
-        // Keep labels visually hidden if desired, but provide them for accessibility
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
       ),
     );
   }
 }
 // --- End Home Screen ---
 
-
-// --- Medicine Display Box Widget (Includes Delete) ---
+// --- Medicine Box (Keep as is) ---
 class MedicineBox extends StatelessWidget {
+  /* ... keep as is ... */
   final Medicine medicine;
-  final VoidCallback onDelete; // Callback function when delete is successful
-
+  final VoidCallback onDelete;
   const MedicineBox({
     super.key,
     required this.medicine,
-    required this.onDelete, // Make onDelete required
+    required this.onDelete,
   });
-
-  // --- Function to handle Deletion ---
   Future<void> _deleteMedicine(BuildContext context) async {
-    // Ensure ID is not empty before attempting delete
-     if (medicine.id.isEmpty) {
-       print('Error: Cannot delete medicine "${medicine.name}" with empty ID.');
-       ScaffoldMessenger.of(context).showSnackBar(
-         const SnackBar(content: Text("ข้อผิดพลาด: ไม่พบ ID ของยา")),
-       );
-       return;
-     }
-
-    // Build the correct URL using the medicine ID
+    if (medicine.id.isEmpty) {
+      print('Error: Cannot delete medicine "${medicine.name}" with empty ID.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ข้อผิดพลาด: ไม่พบ ID ของยา")),
+      );
+      return;
+    }
     final url = Uri.parse('http://10.0.2.2:8080/medicines/${medicine.id}');
     print('Attempting DELETE request to: $url');
-
     try {
-      final response = await http.delete(url).timeout(const Duration(seconds: 10)); // Add timeout
+      final response = await http
+          .delete(url)
+          .timeout(const Duration(seconds: 10));
       print('Delete Response Status Code: ${response.statusCode}');
-      print('Delete Response Body: ${response.body}'); // Print body for debugging
-
-      // Check for successful status codes
-      if (response.statusCode == 200 || response.statusCode == 204) { // 200 OK or 204 No Content
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ลบยา '${medicine.name}' แล้ว")), // Medicine deleted
-        );
-        onDelete(); // Call the callback to refresh the list/reschedule notifications
+      print('Delete Response Body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("ลบยา '${medicine.name}' แล้ว")));
+        onDelete();
       } else {
-        // Handle specific errors based on status code if needed
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ลบยา '${medicine.name}' ไม่สำเร็จ: ${response.statusCode} ${response.body}")),
+          SnackBar(
+            content: Text(
+              "ลบยา '${medicine.name}' ไม่สำเร็จ: ${response.statusCode} ${response.body}",
+            ),
+          ),
         );
       }
     } catch (e) {
       print('Error during delete request for ${medicine.name}: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("เกิดข้อผิดพลาดในการลบยา: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("เกิดข้อผิดพลาดในการลบยา: $e")));
     }
   }
- // --- End Delete Function ---
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4, // Slightly reduced elevation
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), // Adjusted margin
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
-        padding: const EdgeInsets.all(12), // Adjusted padding
+        padding: const EdgeInsets.all(12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start, // Align items to top
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.medication_liquid, size: 40, color: Colors.teal[700]), // Changed icon slightly
+            Icon(Icons.medication_liquid, size: 40, color: Colors.teal[700]),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    // Use 'N/A' if name is empty
                     'ชื่อยา: ${medicine.name.isNotEmpty ? medicine.name : 'N/A'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  if (medicine.description.isNotEmpty) // Only show if not empty
+                  if (medicine.description.isNotEmpty)
                     Text('สรรพคุณ: ${medicine.description}'),
-                  if (medicine.times.isNotEmpty) // Only show if not empty
+                  if (medicine.times.isNotEmpty)
                     Text('เวลา: ${medicine.times}'),
-                  if (medicine.quantity.isNotEmpty) // Only show if not empty
-                    Text('จำนวน: ${medicine.quantity}'),
+                  if (medicine.quantity.isNotEmpty)
+                    Text(
+                      'จำนวน: ${medicine.quantity} ${medicine.unit ?? ''}'
+                          .trim(),
+                    ),
                 ],
               ),
             ),
-            // --- Delete Button ---
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent), // Changed icon
-              iconSize: 24, // Adjusted size
-              visualDensity: VisualDensity.compact, // Make it less bulky
-              padding: EdgeInsets.zero, // Remove extra padding
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              iconSize: 24,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
               tooltip: 'Delete ${medicine.name}',
               onPressed: () {
-                   // Confirmation Dialog before deleting
-                   showDialog(
-                    context: context,
-                    builder: (BuildContext dialogContext) {
-                      return AlertDialog(
-                        title: const Text('ยืนยันการลบ'),
-                        content: Text('คุณต้องการลบยา "${medicine.name}" ใช่หรือไม่?'),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text('ยกเลิก'),
-                            onPressed: () {
-                              Navigator.of(dialogContext).pop(); // Close the dialog
-                            },
+                showDialog(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: const Text('ยืนยันการลบ'),
+                      content: Text(
+                        'คุณต้องการลบยา "${medicine.name}" ใช่หรือไม่?',
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text('ยกเลิก'),
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                          },
+                        ),
+                        TextButton(
+                          child: const Text(
+                            'ลบ',
+                            style: TextStyle(color: Colors.red),
                           ),
-                          TextButton(
-                            child: const Text('ลบ', style: TextStyle(color: Colors.red)),
-                            onPressed: () {
-                              Navigator.of(dialogContext).pop(); // Close the dialog
-                              _deleteMedicine(context); // Proceed with delete
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            _deleteMedicine(context);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
-             // --- End Delete Button ---
           ],
         ),
       ),
@@ -485,48 +517,43 @@ class MedicineBox extends StatelessWidget {
 }
 // --- End Medicine Box ---
 
-
-// --- Clock Display Widget ---
+// --- TimeDisplay (Keep as is) ---
 class TimeDisplay extends StatefulWidget {
+  /* ... */
   const TimeDisplay({super.key});
-
   @override
   _TimeDisplayState createState() => _TimeDisplayState();
 }
 
 class _TimeDisplayState extends State<TimeDisplay> {
+  /* ... keep as is ... */
   String _currentTime = '';
   Timer? _timer;
-
   @override
   void initState() {
     super.initState();
-    // Initialize time immediately
     _currentTime = _formatDateTime(DateTime.now());
-    // Start timer
     _updateTime();
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    _timer?.cancel();
     super.dispose();
   }
 
   String _formatDateTime(DateTime dateTime) {
-      // Ensure locale is set if needed, e.g., 'th_TH' for Thai buddhist calendar/locale
-      // Requires intl initialization for specific locales
-     return DateFormat('dd/MM/yyyy HH:mm:ss').format(dateTime);
+    return DateFormat('dd/MM/yyyy HH:mm:ss').format(dateTime);
   }
 
   void _updateTime() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) { // Check if the widget is still mounted
+      if (mounted) {
         setState(() {
           _currentTime = _formatDateTime(DateTime.now());
         });
       } else {
-         timer.cancel(); // Stop timer if widget is disposed
+        timer.cancel();
       }
     });
   }
@@ -535,7 +562,7 @@ class _TimeDisplayState extends State<TimeDisplay> {
   Widget build(BuildContext context) {
     return Text(
       _currentTime,
-      style: const TextStyle(fontSize: 16, color: Colors.teal), // Consider slightly darker color
+      style: const TextStyle(fontSize: 16, color: Colors.teal),
     );
   }
 }

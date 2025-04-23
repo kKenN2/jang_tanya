@@ -446,11 +446,11 @@ class _InputmedState extends State<Inputmed> {
               context,
               MaterialPageRoute(builder: (context) => const Inputmed()),
             );
-          } else if (index == 2) {
+          /*} else if (index == 2) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ReminderPage()),
-            );
+            );*/
           } else if (index == 3) {
             Navigator.push(
               context,
