@@ -9,6 +9,7 @@ import 'package:medicineproject/notificationHelper.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import plugin
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // --- Global Key ---
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -53,29 +54,47 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey, // Use the key
+      navigatorKey: navigatorKey, // Use the key defined globally
       debugShowCheckedModeBanner: false,
       title: 'Medical App',
-      theme: ThemeData(/* ... */),
-      // Home can be HomeScreen directly now, init happens elsewhere/later if needed
+      theme: ThemeData(
+          primarySwatch: Colors.teal,
+          scaffoldBackgroundColor: Colors.blue[50],
+          // fontFamily: 'YourFont', // Example
+      ), // Ensure closing parenthesis for ThemeData
+
+      // --- ADDED LOCALIZATION SETUP ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate, // For iOS style widgets
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // English
+        Locale('th', ''), // Thai
+        // Add other locales your app supports if needed
+      ],
+      // Optionally set a default locale if needed
+      // locale: const Locale('th', ''),
+      // --- END LOCALIZATION SETUP ---
+
+      // Home can be HomeScreen directly now
       home: const HomeScreen(),
-      // Optionally define routes for cleaner navigation
+
+      // Define routes if using named navigation
       routes: {
-        // Define routes if you use Navigator.pushNamed
-        '/reminder':
-            (context) => const ReminderPage(
-              /* Need to pass data */ medicineId: '',
-              medicineName: '',
-              description: '',
-              quantity: '',
-              unit: '',
-              notificationId: 0,
-            ),
+        // Example: You might fetch data first and then pass it
+        // '/reminder': (context) => const ReminderPage(
+        //       /* This route definition won't work well for passing dynamic data */
+        //       medicineId: '', medicineName: 'N/A', description: '',
+        //       quantity: '', unit: '', notificationId: 0,
+        //     ),
       },
     );
   }
+
 }
 
 // --- Medicine Model (Ensure 'unit' field is added) ---
