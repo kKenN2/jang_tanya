@@ -81,116 +81,144 @@ class _InputmedState extends State<Inputmed> {
     }
   }
 
-  Future<void> _submitData() async {
-    final Uri url = Uri.parse('http://10.0.2.2:8080/medicines');
+  
 
-    final String name = _nameController.text.trim();
-    final String description = _descriptionController.text.trim();
-    final int quantity = int.tryParse(_quantityController.text) ?? 0;
-    final String unit = _selectedOption ?? "unit";
-    final String startDate = _StartDateController.text.trim();
-    final String endDate = _EndDateController.text.trim();
-    List<String> selectedMealTimes = _selectedTimes.toList();
+ Future<void> _submitData() async {
+  final Uri url = Uri.parse('http://10.0.2.2:8080/medicines/upload');
 
-    Map<String, String> selectedTimes = {
-      "morning": _morningTimeController.text,
-      "noon": _noonTimeController.text,
-      "evening": _eveningTimeController.text,
-      "beforeBed": _beforebedTimeController.text,
-    };
+  final String name = _nameController.text.trim();
+  final String description = _descriptionController.text.trim();
+  final int quantity = int.tryParse(_quantityController.text) ?? 0;
+  final String unit = _selectedOption ?? "unit";
+  final String startDate = _StartDateController.text.trim();
+  final String endDate = _EndDateController.text.trim();
+  List<String> selectedMealTimes = _selectedTimes.toList();
 
-    if (name.isEmpty ||
-        description.isEmpty ||
-        startDate.isEmpty ||
-        endDate.isEmpty ||
-        selectedMealTimes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("กรุณากรอกข้อมูลให้ครบถ้วน")),
-      );
-      return;
-    }
+  Map<String, String> selectedTimes = {
+    "morning": _morningTimeController.text,
+    "noon": _noonTimeController.text,
+    "evening": _eveningTimeController.text,
+    "beforeBed": _beforebedTimeController.text,
+  };
 
-    final Map<String, dynamic> requestData = {
-      "name": name,
-      "description": description,
-      "quantity": quantity,
-      "unit": unit,
-      "startDate": startDate,
-      "endDate": endDate,
-      "mealTimes": selectedMealTimes.join(","),
-      "times": selectedTimes.entries
+  if (name.isEmpty ||
+      description.isEmpty ||
+      startDate.isEmpty ||
+      endDate.isEmpty ||
+      selectedMealTimes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("กรุณากรอกข้อมูลให้ครบถ้วน")),
+    );
+    return;
+  }
+
+  try {
+    // วิธีที่ 1: ใช้ MultipartRequest
+    var request = http.MultipartRequest('POST', url);
+    
+    // สร้าง Object สำหรับข้อมูลยา
+    Map<String, dynamic> medicineData = {
+      'name': name,
+      'description': description,
+      'quantity': quantity,
+      'unit': unit,
+      'startDate': startDate,
+      'endDate': endDate,
+      'mealTimes': selectedMealTimes.join(","),
+      'times': selectedTimes.entries
           .where((e) => e.value.isNotEmpty)
           .map((e) => "${e.key} at ${e.value}")
-          .join(", "),
+          .join(", ")
     };
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(requestData),
-      );
+    // เพิ่ม field medicine เป็น JSON string
+    request.fields['medicine'] = jsonEncode(medicineData);
+    
+    // ต้องแน่ใจว่า Content-Type ถูกตั้งค่าเป็น application/json สำหรับ medicine field
+    request.headers['Content-Type'] = 'multipart/form-data';
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        // ✅ บันทึกสำเร็จ
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text("สำเร็จ"),
-                content: const Text("บันทึกข้อมูลสำเร็จ"),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // ปิด dialog
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const HomeScreen(),
-                        ),
-                        (Route<dynamic> route) => false,
-                      );
-                    },
-                    child: const Text("ตกลง"),
-                  ),
-                ],
-              ),
-        );
-      } else {
-        // ❌ บันทึกไม่สำเร็จ
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text("ผิดพลาด"),
-                content: Text("ไม่สามารถบันทึกข้อมูลได้: ${response.body}"),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        () => Navigator.of(context).pop(), // แค่ปิด dialog
-                    child: const Text("ตกลง"),
-                  ),
-                ],
-              ),
-        );
-      }
-    } catch (e) {
-      // ❌ เกิดข้อผิดพลาดระหว่างส่งข้อมูล
-      showDialog(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text("ข้อผิดพลาด"),
-              content: Text("เกิดข้อผิดพลาด: $e"),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text("ตกลง"),
-                ),
-              ],
-            ),
+    // เพิ่มไฟล์รูปภาพ (ถ้ามี)
+    if (_selectedImage != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('file', _selectedImage!.path),
       );
     }
+
+    var response = await request.send();
+    
+    // ทางเลือกที่ 2: ใช้ Dio package (ถ้าคุณต้องการใช้)
+    // แนะนำให้เพิ่ม: import 'package:dio/dio.dart';
+    /*
+    final dio = Dio();
+    FormData formData = FormData.fromMap({
+      'medicine': jsonEncode(medicineData),
+      if (_selectedImage != null)
+        'file': await MultipartFile.fromFile(_selectedImage!.path),
+    });
+
+    final response = await dio.post(
+      'http://10.0.2.2:8080/medicines/upload',
+      data: formData,
+    );
+    */
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final respStr = await response.stream.bytesToString();
+      print("Response: $respStr");  // debug
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("สำเร็จ"),
+          content: const Text("บันทึกข้อมูลสำเร็จ"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  (route) => false,
+                );
+              },
+              child: const Text("ตกลง"),
+            ),
+          ],
+        ),
+      );
+    } else {
+      final responseBody = await response.stream.bytesToString();
+      print("Error Response: $responseBody"); // debug
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("ผิดพลาด"),
+          content: Text("ไม่สามารถบันทึกข้อมูลได้: ${response.statusCode}\n$responseBody"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("ตกลง"),
+            ),
+          ],
+        ),
+      );
+    }
+  } catch (e) {
+    print("Exception: $e"); // debug
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("ข้อผิดพลาด"),
+        content: Text("เกิดข้อผิดพลาด: $e"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("ตกลง"),
+          ),
+        ],
+      ),
+    );
   }
+}
 
   Widget _buildSelectableButton(String text) {
     bool isSelected = _selectedTimes.contains(text);
