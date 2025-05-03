@@ -357,7 +357,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       _isEditing = !_isEditing;
                     });
                   },
-                  child: Text(_isEditing ? 'บันทึก' : 'แก้ไข'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isEditing ? Colors.green : Colors.orange,
                     foregroundColor: Colors.white,
@@ -366,6 +365,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       vertical: 12,
                     ),
                   ),
+                  child: Text(_isEditing ? 'บันทึก' : 'แก้ไข'),
                 ),
               ),
               SizedBox(height: 20),

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:medicineproject/screens/profile.dart';
-import 'package:medicineproject/screens/reminder.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
