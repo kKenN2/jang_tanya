@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:medicineproject/screens/inputmed.dart';
 import 'package:medicineproject/screens/reminder.dart';
+import 'package:medicineproject/screens/reminderView.dart';
 import 'package:medicineproject/screens/profile.dart';
 import 'package:medicineproject/notificationHelper.dart';
 import 'dart:convert';
@@ -54,17 +55,16 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-   Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey, // Use the key defined globally
       debugShowCheckedModeBanner: false,
       title: 'Medical App',
       theme: ThemeData(
-          primarySwatch: Colors.teal,
-          scaffoldBackgroundColor: Colors.blue[50],
-          // fontFamily: 'YourFont', // Example
+        primarySwatch: Colors.teal,
+        scaffoldBackgroundColor: Colors.blue[50],
+        // fontFamily: 'YourFont', // Example
       ), // Ensure closing parenthesis for ThemeData
-
       // --- ADDED LOCALIZATION SETUP ---
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -94,7 +94,6 @@ class MyApp extends StatelessWidget {
       },
     );
   }
-
 }
 
 // --- Medicine Model (Ensure 'unit' field is added) ---
@@ -116,7 +115,7 @@ class Medicine {
     required this.times,
     required this.quantity,
     required this.unit,
-     required this.imageUrl,
+    required this.imageUrl,
   });
   factory Medicine.fromJson(Map<String, dynamic> json) {
     return Medicine(
@@ -296,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'My Medications',
+                'My Medications???!!!',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -379,17 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
             /* Needs data */
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder:
-                    (context) => const ReminderPage(
-                      medicineId: '',
-                      medicineName: 'N/A',
-                      description: '',
-                      quantity: '',
-                      unit: '',
-                      notificationId: 0,
-                    ),
-              ),
+              MaterialPageRoute(builder: (context) => const ReminderViewPage()),
             );
           } else if (index == 3) {
             Navigator.push(
@@ -430,20 +419,30 @@ class MedicineBox extends StatelessWidget {
     final url = Uri.parse('http://10.0.2.2:8080/medicines/${medicine.id}');
     print('Attempting DELETE request to: $url');
     try {
-      final response = await http.delete(url).timeout(const Duration(seconds: 10));
+      final response = await http
+          .delete(url)
+          .timeout(const Duration(seconds: 10));
       print('Delete Response Status Code: ${response.statusCode}');
       print('Delete Response Body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 204) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("ลบยา '${medicine.name}' แล้ว")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("ลบยา '${medicine.name}' แล้ว")));
         onDelete();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ลบยา '${medicine.name}' ไม่สำเร็จ: ${response.statusCode} ${response.body}")),
+          SnackBar(
+            content: Text(
+              "ลบยา '${medicine.name}' ไม่สำเร็จ: ${response.statusCode} ${response.body}",
+            ),
+          ),
         );
       }
     } catch (e) {
       print('Error during delete request for ${medicine.name}: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("เกิดข้อผิดพลาดในการลบยา: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("เกิดข้อผิดพลาดในการลบยา: $e")));
     }
   }
 
@@ -459,7 +458,7 @@ class MedicineBox extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // แสดงรูปภาพเล็กๆ และเพิ่ม GestureDetector เพื่อให้ผู้ใช้สามารถกดดูรูปใหญ่ได้
-            if (medicine.imageUrl.isNotEmpty) 
+            if (medicine.imageUrl.isNotEmpty)
               GestureDetector(
                 onTap: () {
                   // เมื่อกดที่รูปภาพจะเปิด Dialog เพื่อดูรูปใหญ่
@@ -484,15 +483,22 @@ class MedicineBox extends StatelessWidget {
                     width: 50, // กำหนดขนาดของรูปภาพ
                     height: 50,
                     fit: BoxFit.cover,
-                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                    loadingBuilder: (
+                      BuildContext context,
+                      Widget child,
+                      ImageChunkEvent? loadingProgress,
+                    ) {
                       if (loadingProgress == null) {
                         return child;
                       } else {
                         return Center(
                           child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
-                                : null,
+                            value:
+                                loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        (loadingProgress.expectedTotalBytes ??
+                                            1)
+                                    : null,
                           ),
                         );
                       }
@@ -569,7 +575,6 @@ class MedicineBox extends StatelessWidget {
     );
   }
 }
-
 
 // --- End Medicine Box ---
 
