@@ -84,51 +84,42 @@ class _ReminderPageState extends State<ReminderPage> {
   // --- END Helper Function ---
 
 
-  // --- Action for "OK" (ตกลง) Button ---
+   // --- Action for "OK" (ตกลง) Button ---
   Future<void> _handleOkAction() async {
-    // Prevent double taps while deleting OR logging
-    if (_isDeleting || _isLogging) return;
+    // Prevent overlap while logging
+    if (_isLogging || _isSnoozing) return; // Remove _isDeleting check
 
     // 1. Attempt to log the action
     bool logSuccess = await _sendLog("TAKEN"); // Log as "TAKEN"
 
-    // Optional: Decide if you want to proceed with delete only if logging succeeds
-    // if (!logSuccess) {
-    //    print("Aborting delete because logging failed.");
-    //    return;
+    // Optional: Check logSuccess if you want to show an error if logging fails
+    // if (!logSuccess && mounted) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Could not log action.')),
+    //   );
+    //   // Decide whether to pop the screen even if logging failed
     // }
 
-    // 2. Proceed with deleting the medicine entry (if desired)
-    setState(() { _isDeleting = true; });
-    print('OK Action: Attempting to delete medicine ID: ${widget.medicineId}');
-    final deleteUrl = Uri.parse('http://10.0.2.2:8080/medicines/${widget.medicineId}');
-    try {
-      final response = await http.delete(deleteUrl).timeout(const Duration(seconds: 10));
-      print('Delete Response Status Code: ${response.statusCode}');
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        print('Medicine ${widget.medicineId} deleted successfully.');
-        await NotificationHelper.cancelNotification(widget.notificationId);
-        if (!mounted) return;
+    // 2. Simply close the reminder page
+    if (mounted) {
+         // Maybe show a confirmation SnackBar that is different from delete one
          ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("ยืนยันการกินยา '${widget.medicineName}' และลบข้อมูลแล้ว")),
+             SnackBar(content: Text("ยืนยันการกินยา '${widget.medicineName}' แล้ว")),
          );
-        Navigator.of(context).pop(); // Close screen
-      } else {
-        print('Failed to delete medicine ${widget.medicineId}: ${response.statusCode} ${response.body}');
-         if (!mounted) return;
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("ลบข้อมูลไม่สำเร็จ: ${response.statusCode}")),
-         );
-      }
-    } catch (e) {
-      print('Error deleting medicine ${widget.medicineId}: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text("เกิดข้อผิดพลาด: $e")), );
-    } finally {
-       if (mounted) { setState(() { _isDeleting = false; }); }
+      Navigator.of(context).pop(); // Close this screen
     }
   }
+
+  // Make sure to also remove the _isDeleting state variable declaration:
+  // bool _isDeleting = false; // <-- DELETE THIS LINE at the top of _ReminderPageState
+
+  // And remove _isDeleting from the button's loading check in build method:
+  // bool buttonsDisabled = _isLogging || _isDeleting || _isSnoozing; // Change to below
+  // bool buttonsDisabled = _isLogging || _isSnoozing; // Or just check _isLogging for OK button
+
+  // And update the CircularProgressIndicator logic for the OK button:
+  // child: _isDeleting || (_isLogging && !_isSnoozing) // Change to below
+  // child: _isLogging // Show indicator only while logging for the OK button
 
   // --- Action for "Postpone" (เลื่อนไปก่อน) Button ---
   Future<void> _handlePostponeAction() async {
