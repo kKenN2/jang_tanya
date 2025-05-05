@@ -1,97 +1,189 @@
-/*import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
   @override
   _RegisterPageState createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  String _gender = 'ชาย';
+  bool _isRegistering = false;
 
-  void _register() {
-    String username = _usernameController.text;
-    String password = _passwordController.text;
-    String confirmPassword = _confirmPasswordController.text;
+  Future<void> _register() async {
+    if (_emailController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _usernameController.text.isEmpty ||
+        _ageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')),
+      );
+      return;
+    }
 
-    if (username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showError("Please fill in all fields");
-    } else if (password != confirmPassword) {
-      _showError("Passwords do not match");
-    } else {
-      // สมมุติว่า "สมัคร" สำเร็จแล้วกลับไปหน้า login
-      showDialog(
-        context: context,
-        builder:
-            (_) => AlertDialog(
-              title: Text('Register Successful'),
-              content: Text('You can now log in.'),
-              actions: [
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    Navigator.pop(context); // ปิด dialog
-                    Navigator.pop(context); // กลับไปหน้า login
-                  },
-                ),
-              ],
-            ),
+    final age = int.tryParse(_ageController.text);
+    if (age == null || age <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกอายุให้ถูกต้อง')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isRegistering = true;
+    });
+
+    final userData = {
+      'username': _usernameController.text,
+      'email': _emailController.text,
+      'password': _passwordController.text,
+      'age': age,
+      'gender': _gender,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8080/userdata')
+,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(userData),
+      );
+
+      setState(() {
+        _isRegistering = false;
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('สมัครสมาชิกสำเร็จ')),
+        );
+        Navigator.pop(context);
+      } else {
+        final message = jsonDecode(response.body)['message'] ?? 'เกิดข้อผิดพลาด';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('สมัครไม่สำเร็จ: $message')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isRegistering = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ: $e')),
       );
     }
-  }
-
-  void _showError(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                child: Text('OK'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('สมัครใช้งาน')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'อีเมล'),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('ลงทะเบียน'),
+        backgroundColor: const Color.fromRGBO(0, 150, 136, 1),
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _usernameController,
+                        decoration: _buildInputDecoration('ชื่อผู้ใช้'),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _emailController,
+                        decoration: _buildInputDecoration('อีเมล'),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _passwordController,
+                        decoration: _buildInputDecoration('รหัสผ่าน'),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _ageController,
+                        decoration: _buildInputDecoration('อายุ'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: _gender,
+                        onChanged: (value) => setState(() => _gender = value!),
+                        items: ['ชาย', 'หญิง']
+                            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                            .toList(),
+                        decoration: _buildInputDecoration('เพศ'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _isRegistering ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(0, 150, 136, 1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isRegistering
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('สมัครสมาชิก', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: _isRegistering ? null : () => Navigator.pop(context),
+                  child: const Text('มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'),
+                ),
+              ],
             ),
-            TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(labelText: 'ชื่อ-นามสกุล ผู้ใช้'),
-            ),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: 'รหัสผ่าน'),
-            ),
-            TextField(
-              controller: _confirmPasswordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: 'ยืนยันรหัสผ่าน'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(onPressed: _register, child: Text('สมัคร')),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  InputDecoration _buildInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.grey[100],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
 }
-*/
+
+
