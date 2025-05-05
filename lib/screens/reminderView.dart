@@ -1,9 +1,7 @@
-// --- reminderView.dart (with Image Display Added) ---
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-// IMPORTANT: Ensure these functions are accessible. Move them to a shared file if needed.
+
 import 'package:medicineproject/main.dart' show Medicine, fetchMedicines, parseMedicineTimes; // Ensure Medicine model includes imageUrl
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;

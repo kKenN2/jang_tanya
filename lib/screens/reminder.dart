@@ -1,5 +1,3 @@
-// --- CORRECTED reminder.dart ---
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Import http
 import 'package:medicineproject/notificationHelper.dart';
