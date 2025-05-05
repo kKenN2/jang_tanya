@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import plugin
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:medicineproject/loginscreens/loginpage.dart';
 
 // --- Global Key ---
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -81,7 +82,8 @@ class MyApp extends StatelessWidget {
       // --- END LOCALIZATION SETUP ---
 
       // Home can be HomeScreen directly now
-      home: const HomeScreen(),
+      home: const LoginPage(),
+
 
       // Define routes if using named navigation
       routes: {
