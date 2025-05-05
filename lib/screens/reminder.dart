@@ -157,7 +157,7 @@ class _ReminderPageState extends State<ReminderPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("เลื่อนการแจ้งเตือน '${widget.medicineName}' ไปอีก 15 นาที")),
+           SnackBar(content: Text("เลื่อนการแจ้งเตือน '${widget.medicineName}' ไปอีก 5 นาที")),
       );
       Navigator.of(context).pop(); // Close the reminder page
       // No need to set _isSnoozing=false as page is popped

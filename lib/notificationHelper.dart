@@ -196,7 +196,7 @@ class NotificationHelper {
   }) async {
     final tz.TZDateTime snoozeDateTime = tz.TZDateTime.now(
       tz.local,
-    ).add(const Duration(minutes: 15));
+    ).add(const Duration(minutes: 5));  // 5 minutes
     const androidDetails = AndroidNotificationDetails(
       'medicine_channel_id_01',
       'Medicine Reminders',
